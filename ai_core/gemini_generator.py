@@ -285,41 +285,50 @@ class GeminiDocumentGenerator:
 
         logger.info(f"Generating '{document_type}' using model '{self.model}'")
 
-        try:
-            # Call Gemini using the google-genai SDK
-            response = client.models.generate_content(
-                model=self.model,
-                contents=user_prompt,
-                config={
-                    "system_instruction": system_instruction,
-                    "temperature": 0.2,  # Low temperature for formal, deterministic legal drafting
-                    "max_output_tokens": 8192,
-                }
-            )
+        # Candidate models to try in sequence for maximum resilience
+        candidate_models = [self.model]
+        for m in ["gemini-3.8-flash", "gemma-4-26b-a4b-it", "gemma-4-31b-it", "gemini-3.5-flash-lite"]:
+            if m not in candidate_models:
+                candidate_models.append(m)
 
-            if not response or not response.text:
-                raise RuntimeError("Gemini returned an empty response. Please try again.")
+        last_error = None
 
-            document_text = response.text.strip()
-            # Clean any leading/trailing markdown code blocks if the model wrapped it
-            if document_text.startswith("```markdown"):
-                document_text = document_text[len("```markdown"):].strip()
-            elif document_text.startswith("```"):
-                document_text = document_text[len("```"):].strip()
-            if document_text.endswith("```"):
-                document_text = document_text[:-3].strip()
+        for model_candidate in candidate_models:
+            try:
+                logger.info(f"Attempting document generation with model '{model_candidate}'")
+                response = client.models.generate_content(
+                    model=model_candidate,
+                    contents=user_prompt,
+                    config={
+                        "system_instruction": system_instruction,
+                        "temperature": 0.2,  # Low temperature for formal, deterministic legal drafting
+                        "max_output_tokens": 8192,
+                    }
+                )
 
-            return document_text
+                if response and response.text and response.text.strip():
+                    document_text = response.text.strip()
+                    # Clean any leading/trailing markdown code blocks if the model wrapped it
+                    if document_text.startswith("```markdown"):
+                        document_text = document_text[len("```markdown"):].strip()
+                    elif document_text.startswith("```"):
+                        document_text = document_text[len("```"):].strip()
+                    if document_text.endswith("```"):
+                        document_text = document_text[:-3].strip()
 
-        except Exception as e:
-            logger.error(f"Error calling Gemini API: {str(e)}", exc_info=True)
-            # Re-raise friendly error avoiding sensitive credentials
-            err_msg = str(e)
-            if "API_KEY_INVALID" in err_msg or "invalid api key" in err_msg.lower():
-                raise ValueError("The provided Gemini API key is invalid. Please check your credentials.")
-            elif "RESOURCE_EXHAUSTED" in err_msg or "rate limit" in err_msg.lower():
-                raise RuntimeError("Gemini API rate limit exceeded. Please wait a moment and try again.")
-            elif "NOT_FOUND" in err_msg and "models/" in err_msg:
-                raise RuntimeError(f"The specified model '{self.model}' was not found. Please verify the model name.")
-            else:
-                raise RuntimeError(f"Failed to generate legal document: {err_msg}")
+                    return document_text
+
+            except Exception as e:
+                err_msg = str(e)
+                logger.warning(f"Model '{model_candidate}' attempt failed: {err_msg}")
+                last_error = e
+                # If invalid key, fail immediately without trying remaining models
+                if "API_KEY_INVALID" in err_msg or "invalid api key" in err_msg.lower():
+                    raise ValueError("The provided Gemini API key is invalid. Please check your credentials.")
+                continue
+
+        # If all candidates failed, surface a clean error
+        err_str = str(last_error) if last_error else "Unknown error"
+        if "RESOURCE_EXHAUSTED" in err_str or "rate limit" in err_str.lower():
+            raise RuntimeError("Gemini API rate limit exceeded. Please wait a moment and try again.")
+        raise RuntimeError(f"Failed to generate legal document: {err_str}")
