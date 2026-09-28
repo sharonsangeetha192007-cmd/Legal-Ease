@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LegalEase — AI-Powered Legal Document Generator</title>
+  <meta name="description" content="Generate professionally structured legal agreements powered by Google Gemini. Edit, customize, and export to TXT, DOCX, and PDF." />
+  <link rel="icon" type="image/svg+xml" href="/public/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <img src="/public/logo.svg" alt="LegalEase Emblem" class="brand-logo" width="40" height="40" />
+        <div class="brand-text">
+          <div class="brand-title">LegalEase</div>
+          <div class="brand-tagline">AI-Powered Legal Document Generator</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-badge" id="apiStatusBadge">
+          <span class="status-dot"></span>
+          <span class="status-label">Checking API...</span>
+        </div>
+        <a href="/api/docs" target="_blank" rel="noopener" class="api-docs-link" title="FastAPI Interactive Documentation">
+          API Docs ↗
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Legal Disclaimer Banner -->
+  <div class="disclaimer-banner">
+    <div class="disclaimer-content">
+      <svg class="icon-warning" viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+        <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+      </svg>
+      <span>
+        <strong>Legal Notice:</strong> LegalEase generates documents for informational and drafting purposes only. Generated content is not legal advice and should be reviewed by a qualified legal professional before signing or use.
+      </span>
+    </div>
+  </div>
+
+  <!-- Main Application Workspace -->
+  <main class="main-container">
+    
+    <!-- Left Column: Drafting Form -->
+    <section class="panel form-panel">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2>Generate Your Legal Document</h2>
+          <p class="panel-subtitle">Select a document type and customize the essential terms.</p>
+        </div>
+        <!-- Quick Sample loader -->
+        <div class="sample-loader">
+          <label for="samplePreset">Sample Preset:</label>
+          <select id="samplePreset" class="select-sm">
+            <option value="">-- Choose Example --</option>
+            <option value="nda">Non-Disclosure Agreement</option>
+            <option value="contractor">Freelance/Contractor</option>
+            <option value="lease">Rental/Lease Agreement</option>
+            <option value="employment">Employment Agreement</option>
+          </select>
+        </div>
+      </div>
+
+      <form id="documentForm" class="document-form" novalidate>
+        
+        <!-- Document Type Selection -->
+        <div class="form-group">
+          <label for="documentType" class="field-label">
+            Document Type <span class="required">*</span>
+          </label>
+          <div class="select-wrapper">
+            <select id="documentType" name="document_type" required>
+              <option value="" disabled selected>Select a document type...</option>
+              <option value="Non-Disclosure Agreement">Non-Disclosure Agreement (NDA)</option>
+              <option value="Employment Agreement">Employment Agreement</option>
+              <option value="Freelance/Independent Contractor Agreement">Freelance/Independent Contractor Agreement</option>
+              <option value="Rental/Lease Agreement">Rental/Lease Agreement</option>
+              <option value="Service Agreement">Service Agreement</option>
+              <option value="Partnership Agreement">Partnership Agreement</option>
+              <option value="Sales Agreement">Sales Agreement</option>
+              <option value="Memorandum of Understanding">Memorandum of Understanding (MOU)</option>
+              <option value="Privacy Policy">Privacy Policy</option>
+              <option value="Terms and Conditions">Terms and Conditions</option>
+              <option value="General Legal Agreement">General Legal Agreement</option>
+            </select>
+          </div>
+          <small class="field-hint" id="typeHint">Select the legal instrument best suited for your transaction.</small>
+        </div>
+
+        <!-- Parties Involved -->
+        <div class="form-group">
+          <label for="parties" class="field-label">
+            Parties &amp; Roles <span class="required">*</span>
+          </label>
+          <textarea
+            id="parties"
+            name="parties"
+            rows="3"
+            placeholder="e.g. Apex Innovations Inc., a Delaware corporation (Disclosing Party), and Meridian Tech LLC, a California LLC (Receiving Party)."
+            required
+            minlength="3"
+            maxlength="1500"
+          ></textarea>
+          <div class="field-footer">
+            <small class="field-hint">Specify full legal entities, jurisdiction of formation, and party designations.</small>
+            <span class="char-count" id="partiesCharCount">0 / 1500</span>
+          </div>
+        </div>
+
+        <!-- Effective Date / Term -->
+        <div class="form-group">
+          <label for="dates" class="field-label">
+            Effective Date &amp; Duration <span class="required">*</span>
+          </label>
+          <div class="date-input-group">
+            <input
+              type="text"
+              id="dates"
+              name="dates"
+              placeholder="e.g. October 1, 2026, for an initial term of 2 years"
+              required
+              minlength="2"
+              maxlength="300"
+            />
+            <input type="date" id="datePickerHelper" class="date-picker-icon-btn" title="Pick a calendar date" />
+          </div>
+          <small class="field-hint">Provide effective start date, term length, renewal provisions, or milestones.</small>
+        </div>
+
+        <!-- Key Terms & Conditions -->
+        <div class="form-group">
+          <label for="terms" class="field-label">
+            Key Terms &amp; Conditions <span class="required">*</span>
+          </label>
+          <textarea
+            id="terms"
+            name="terms"
+            rows="6"
+            placeholder="Enter key deal terms, covenants, consideration, payment amounts, confidentiality scope, obligations, governing state/law, and any specific termination clauses..."
+            required
+            minlength="5"
+            maxlength="10000"
+          ></textarea>
+          <div class="field-footer">
+            <small class="field-hint">The AI will incorporate all specific requirements and insert standardized legal covenants.</small>
+            <span class="char-count" id="termsCharCount">0 / 10000</span>
+          </div>
+        </div>
+
+        <!-- Form Action -->
+        <div class="form-actions">
+          <button type="submit" id="generateBtn" class="btn btn-primary btn-block">
+            <span class="btn-text">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+              Generate Legal Document
+            </span>
+            <span class="btn-loading hidden">
+              <span class="spinner"></span>
+              Drafting with Gemini AI...
+            </span>
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- Right Column: Document Review & Editor -->
+    <section class="panel editor-panel">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <h2 id="editorDocumentTitle">Generated Legal Document</h2>
+          <p class="panel-subtitle">Review, modify, or format your document in the editor below before downloading.</p>
+        </div>
+        <div class="editor-metrics" id="editorMetrics">
+          <span class="metric-pill" id="wordCountBadge">0 words</span>
+          <span class="metric-pill" id="charCountBadge">0 chars</span>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="editor-action-bar">
+        <div class="action-group-left">
+          <button type="button" id="copyBtn" class="btn btn-secondary btn-sm" title="Copy text to clipboard">
+            <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copy
+          </button>
+          <button type="button" id="regenerateBtn" class="btn btn-secondary btn-sm" title="Regenerate this document with Gemini">
+            <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            Regenerate
+          </button>
+          <button type="button" id="clearEditorBtn" class="btn btn-secondary btn-sm" title="Clear the editor">
+            Clear
+          </button>
+        </div>
+
+        <div class="action-group-right">
+          <span class="export-label">Download:</span>
+          <button type="button" id="exportTxtBtn" class="btn btn-outline btn-sm" title="Download Plain Text file">
+            TXT
+          </button>
+          <button type="button" id="exportDocxBtn" class="btn btn-gold btn-sm" title="Download formatted Microsoft Word document (.docx)">
+            <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            DOCX
+          </button>
+          <button type="button" id="exportPdfBtn" class="btn btn-primary btn-sm" title="Download formatted PDF document">
+            <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <path d="M9 15h6"></path>
+              <path d="M9 11h6"></path>
+            </svg>
+            PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Editor Canvas Area -->
+      <div class="editor-container" id="editorWrapper">
+        <!-- Initial Empty State -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon-shield">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <h3>No Document Generated Yet</h3>
+          <p>Fill out the terms on the left or click <strong>Sample Preset</strong> to instantly load an example agreement, then click <strong>Generate Legal Document</strong>.</p>
+        </div>
+
+        <!-- Loading State Skeleton -->
+        <div class="loading-state hidden" id="loadingState">
+          <div class="loading-pulse-header"></div>
+          <div class="loading-pulse-line long"></div>
+          <div class="loading-pulse-line medium"></div>
+          <div class="loading-pulse-line full"></div>
+          <div class="loading-pulse-line long"></div>
+          <div class="loading-pulse-line medium"></div>
+          <p class="loading-text">
+            <span class="spinner-gold"></span>
+            Generating your legal document with Google Gemini AI...
+          </p>
+        </div>
+
+        <!-- The Editable Legal Document Canvas -->
+        <textarea
+          id="documentEditor"
+          class="document-editor hidden"
+          placeholder="Your generated legal document will appear here for review and inline editing..."
+          spellcheck="true"
+        ></textarea>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="editor-footer">
+        <span class="editor-tip">
+          💡 <strong>Tip:</strong> You can edit any clause, fill in <code>[BRACKETED PLACEHOLDERS]</code>, and click <strong>DOCX</strong> or <strong>PDF</strong> to download your customized agreement.
+        </span>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Page Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-left">
+        <strong>LegalEase</strong> &copy; 2026. Built with FastAPI, Google Gemini, and modern web architecture.
+      </div>
+      <div class="footer-right">
+        <span>Drafting purposes only • Not legal advice</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "legalease",
+  "version": "1.0.0",
+  "description": "LegalEase: AI-Powered Legal Document Generator built with FastAPI, Google Gemini, and modern web architecture.",
+  "main": "frontend/index.html",
+  "scripts": {
+    "start": "uvicorn legalEaseAPI.main:app --reload",
+    "dev": "uvicorn legalEaseAPI.main:app --reload --port 8000",
+    "streamlit": "streamlit run frontend/app.py",
+    "test": "pytest tests/ -v"
+  },
+  "keywords": [
+    "legalease",
+    "legal-ai",
+    "fastapi",
+    "gemini",
+    "document-generator",
+    "docx",
+    "pdf"
+  ],
+  "author": "LegalEase Engineering Team",
+  "license": "MIT"
+}
