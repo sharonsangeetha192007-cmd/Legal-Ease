@@ -1,7 +1,8 @@
 """Main entrypoint for LegalEase FastAPI application.
 
 Configures CORS, registers API routers, sets up global error handling,
-and optionally serves the frontend for seamless local development.
+and serves the frontend web interface with comprehensive fallbacks for both
+local development and Vercel serverless execution.
 """
 
 import os
@@ -9,7 +10,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from legalEaseAPI.routes import router as api_router
@@ -27,9 +28,8 @@ app = FastAPI(
         f"LEGAL DISCLAIMER: {LEGAL_DISCLAIMER_TEXT}"
     ),
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    docs_url="/docs",
+    openapi_url="/openapi.json"
 )
 
 # =====================================================================
@@ -46,8 +46,9 @@ app.add_middleware(
 )
 
 # =====================================================================
-# API Routes
+# Register API Routes (Both with /api prefix and root for Vercel rewrites)
 # =====================================================================
+app.include_router(api_router, prefix="/api")
 app.include_router(api_router)
 
 
@@ -67,23 +68,83 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # =====================================================================
-# Static Frontend Serving for Local Development
+# Static File & UI Serving (Robust against Vercel serverless bundling)
 # =====================================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 PUBLIC_DIR = BASE_DIR / "public"
 
-# Mount /public if it exists
+# Mount static directories if they exist
 if PUBLIC_DIR.is_dir():
     app.mount("/public", StaticFiles(directory=str(PUBLIC_DIR)), name="public")
 
-# Serve frontend static assets and index.html
 if FRONTEND_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
-    @app.get("/", include_in_schema=False)
-    async def serve_index():
-        index_file = FRONTEND_DIR / "index.html"
-        if index_file.is_file():
-            return FileResponse(str(index_file))
-        return JSONResponse({"message": "LegalEase API is running. Access /api/docs for documentation."})
+
+def _find_file(*candidates):
+    """Search for a file across multiple candidate directories."""
+    for c in candidates:
+        if c and Path(c).is_file():
+            return Path(c)
+    return None
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+async def serve_index():
+    target = _find_file(
+        BASE_DIR / "index.html",
+        FRONTEND_DIR / "index.html",
+        PUBLIC_DIR / "index.html",
+        Path.cwd() / "index.html",
+        Path.cwd() / "frontend" / "index.html",
+    )
+    if target:
+        return FileResponse(str(target), media_type="text/html")
+    return HTMLResponse("<h1>LegalEase</h1><p>Document Generator is running.</p>")
+
+
+@app.get("/style.css", include_in_schema=False)
+@app.get("/static/style.css", include_in_schema=False)
+@app.get("/public/style.css", include_in_schema=False)
+async def serve_css():
+    target = _find_file(
+        BASE_DIR / "style.css",
+        FRONTEND_DIR / "style.css",
+        PUBLIC_DIR / "style.css",
+        Path.cwd() / "style.css",
+        Path.cwd() / "frontend" / "style.css",
+    )
+    if target:
+        return FileResponse(str(target), media_type="text/css")
+    return Response(content="", media_type="text/css")
+
+
+@app.get("/app.js", include_in_schema=False)
+@app.get("/static/app.js", include_in_schema=False)
+@app.get("/public/app.js", include_in_schema=False)
+async def serve_js():
+    target = _find_file(
+        BASE_DIR / "app.js",
+        FRONTEND_DIR / "app.js",
+        PUBLIC_DIR / "app.js",
+        Path.cwd() / "app.js",
+        Path.cwd() / "frontend" / "app.js",
+    )
+    if target:
+        return FileResponse(str(target), media_type="application/javascript")
+    return Response(content="", media_type="application/javascript")
+
+
+@app.get("/logo.svg", include_in_schema=False)
+@app.get("/public/logo.svg", include_in_schema=False)
+async def serve_logo_svg():
+    target = _find_file(
+        BASE_DIR / "logo.svg",
+        PUBLIC_DIR / "logo.svg",
+        Path.cwd() / "public" / "logo.svg",
+    )
+    if target:
+        return FileResponse(str(target), media_type="image/svg+xml")
+    return Response(content="", media_type="image/svg+xml")

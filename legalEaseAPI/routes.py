@@ -19,7 +19,7 @@ from ai_core.gemini_generator import (
 )
 from ai_core.export_utils import export_to_txt, export_to_docx, export_to_pdf
 
-router = APIRouter(prefix="/api", tags=["LegalEase"])
+router = APIRouter(tags=["LegalEase"])
 
 
 # =====================================================================
